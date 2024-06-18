@@ -1,5 +1,5 @@
 build:
-	gcc -o bin/repl -Wall -pedantic src/repl.c src/hashtable.c
+	gcc -o bin/server -Wall -pedantic src/server_select.c src/hashtable.c
 
 clean:
-	rm bin/repl
+	rm bin/server
