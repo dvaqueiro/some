@@ -39,6 +39,11 @@ void process_command(hash_table *table, char *command, char *response);
 void tokenize_command(char *command, char **tokens, size_t *num_tokens);
 uint64_t hash_fnv1(const char *key, size_t length);
 
+int stop = 0;
+void gracefull_stop() {
+    stop = 1;
+}
+
 int main() {
     const int tablesize = 5;
     hash_table *table = hash_table_create(tablesize, hash_fnv1, NULL);
@@ -46,6 +51,10 @@ int main() {
 
     server = server_init(PORT, BACKLOG);
     server_main_loop(server, table);
+
+    printf("Server stopped\n");
+    hash_table_destroy(table);
+    free(server);
 
     return 0;
 }
@@ -162,7 +171,7 @@ void server_main_loop(server_t *server, hash_table *table) {
     char buffer[1025];
     char *welcome = "Welcome to the server\n";
 
-    while (1) {
+    while (stop != 1) {
         //clear the socket set
         FD_ZERO(&readfds);
 
@@ -212,6 +221,10 @@ void process_command(hash_table *table, char *command, char *response) {
 
     if (strcmp(tokens[0], "version") == 0) {
         sprintf(response, "%s Version %s\n",PROG_NAME, VERSION);
+    }
+
+    if (strcmp(tokens[0], "stop") == 0) {
+        gracefull_stop();
     }
 
     if (strcmp(tokens[0], "print") == 0) {
