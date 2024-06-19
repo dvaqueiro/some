@@ -74,8 +74,10 @@ bool hash_table_insert(hash_table *ht, const char *key, char *data) {
     }
     size_t index = hash_table_index(ht, key);
 
-    //No duplicates
-    if (hash_table_lookup(ht, key) != NULL) return false;
+    //Update entry
+    if (hash_table_lookup(ht, key) != NULL) {
+        hash_table_delete(ht, key);
+    }
 
     //Create new entry
     entry *e = malloc(sizeof(*e));
