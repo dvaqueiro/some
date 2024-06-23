@@ -11,9 +11,17 @@
 
 #define SOCKET_ERROR -1
 #define MAX_CLIENTS 2
+#define MAX_READ_BUFFER_SIZE 1024
+#define MAX_WRITE_BUFFER_SIZE 1024
 
 #define FNV_PRIME 0x10000001b3
 #define FNV_OFFSET 0xcbf29ce48422325UL
+
+typedef struct Request {
+    int socket_idx;
+    char *read_buffer;
+    int read_buffer_size;
+} Request;
 
 int check_or_exit(int err, const char *msg) {
     if (err == SOCKET_ERROR) {
@@ -129,18 +137,19 @@ void server_handle_client_close(server_t *server, int client_socket_idx) {
     server->client_sockets[client_socket_idx] = 0;
 }
 
-void server_handle_client_req(server_t *server, int client_socket_idx, char *buffer, int valread) {
-    char response[1024] = "";
+void server_handle_client_req(server_t *server, Request *req) {
+    int res_len = 0;
+    char response[MAX_WRITE_BUFFER_SIZE] = "";
     //buffer[valread] = '\0';
-    buffer[strcspn(buffer, "\r\n")] = '\0';
-    process_command(server, buffer, response, 1024);
-    send(server->client_sockets[client_socket_idx], response, strlen(response), 0);
+    req->read_buffer[strcspn(req->read_buffer, "\r\n")] = '\0';
+    res_len = process_command(server, req->read_buffer, response, MAX_WRITE_BUFFER_SIZE);
+    send(server->client_sockets[req->socket_idx], response, res_len, 0);
 }
 
 void server_main_loop(server_t *server) {
     int max_sd, activity, valread;
     fd_set readfds;
-    char buffer[1025];
+    char buffer[MAX_READ_BUFFER_SIZE + 1];
     char *welcome = "Welcome to the server\n";
 
     while (server->stop != 1) {
@@ -172,13 +181,18 @@ void server_main_loop(server_t *server) {
             server_accept_new_connection(server, welcome);
         }
 
-        for (int i = 0; i < MAX_CLIENTS; i++) {
-            if (FD_ISSET(server->client_sockets[i], &readfds)) {
-                if ((valread = read(server->client_sockets[i], buffer, 1024)) == 0) {
+        for (int sock_idx = 0; sock_idx < MAX_CLIENTS; sock_idx++) {
+            if (FD_ISSET(server->client_sockets[sock_idx], &readfds)) {
+                if ((valread = read(server->client_sockets[sock_idx], buffer, MAX_READ_BUFFER_SIZE)) == 0) {
                     //Somebody disconnected. Close the socket and mark as 0 in list for reuse
-                    server_handle_client_close(server, i);
+                    server_handle_client_close(server, sock_idx);
                 } else {
-                    server_handle_client_req(server, i, buffer, valread);
+                    Request *req = malloc(sizeof(Request));
+                    req->socket_idx = sock_idx;
+                    req->read_buffer = buffer;
+                    req->read_buffer_size = valread;
+                    server_handle_client_req(server, req);
+                    free(req);
                 }
             }
         }

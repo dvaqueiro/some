@@ -19,8 +19,6 @@ server_t *server_init(short port, int backlog);
 void server_free(server_t *server);
 void server_main_loop(server_t *server);
 void server_accept_new_connection(server_t *server, char *welcome);
-void server_handle_client_close(server_t *server, int client_socket_idx);
-void server_handle_client_req(server_t *server, int client_socket_idx, char *buffer, int valread);
 void server_print_sockets(server_t *server);
 
 #endif // SERVER_H
