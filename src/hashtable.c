@@ -11,6 +11,7 @@ typedef struct entry {
 
 struct _hash_table {
     uint32_t size;
+    uint32_t num_elements;
     hashfunction *hash;
     cleanup_function *cleanup;
     entry **elements;
@@ -26,6 +27,7 @@ hash_table *hash_table_create(uint32_t size, hashfunction *hf, cleanup_function 
     hash_table *ht = malloc(sizeof(*ht));
     ht->size = size;
     ht->hash = hf;
+    ht->num_elements = 0;
     ht->collisions = 0;
     if (cf == NULL) cf = free; //default cleanup function (free)
     ht->cleanup = cf;
@@ -50,6 +52,9 @@ void hash_table_destroy(hash_table *ht) {
 }
 
 void hash_table_print(hash_table *ht) {
+    printf("hash_table size %u:\n", ht->size);
+    printf("hash_table num elements %u:\n", ht->num_elements);
+    printf("hash_table colisions %lu:\n", ht->collisions);
     for (uint32_t i = 0; i < ht->size; i++) {
         if (ht->elements[i] == NULL) {
             //printf("\t%i\t---\n", 1);
@@ -67,6 +72,23 @@ void hash_table_print(hash_table *ht) {
     }
 }
 
+char **hash_table_keys(hash_table *ht, int *num_keys) {
+    char **keys = malloc(sizeof(char *) * ht->num_elements);
+    for (uint32_t i = 0; i < ht->size; i++) {
+        if (ht->elements[i] != NULL) {
+            entry *tmp = ht->elements[i];
+            keys[(*num_keys)++] = tmp->key;
+            while (tmp != NULL) {
+                tmp = tmp->next;
+                if (tmp != NULL) {
+                    keys[(*num_keys)++] = tmp->key;
+                }
+            }
+        }
+    }
+    return keys;
+}
+
 bool hash_table_insert(hash_table *ht, const char *key, char *data) {
     //No null key or data
     if (key == NULL || data == NULL) {
@@ -76,6 +98,7 @@ bool hash_table_insert(hash_table *ht, const char *key, char *data) {
 
     //Update entry
     if (hash_table_lookup(ht, key) != NULL) {
+        ht->num_elements--;
         hash_table_delete(ht, key);
     }
 
@@ -91,6 +114,7 @@ bool hash_table_insert(hash_table *ht, const char *key, char *data) {
         ht->collisions++;
     }
     e->next = ht->elements[index];
+    ht->num_elements++;
     ht->elements[index] = e;
 
     return true;
@@ -128,6 +152,7 @@ char *hash_table_delete(hash_table *ht, const char *key) {
         //deleting from somewhere not the head
         prev->next = tmp->next;
     }
+    ht->num_elements--;
     char *result = tmp->data;
     free(tmp);
 

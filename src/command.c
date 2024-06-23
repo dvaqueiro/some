@@ -40,6 +40,18 @@ int process_command(server_t *server, char *command, char *response, size_t max_
         printf("##############\n");
         res_len = snprintf(response, max_res_buff_size, "OK\n");
     }
+    if (strcmp(tokens[0], "keys") == 0 && num_tokens == 1) {
+        int num_keys = 0;
+        char **keys = hash_table_keys(table, &num_keys);
+        if (num_keys == 0) {
+            res_len = snprintf(response, max_res_buff_size, "(empty list)\n");
+        } else {
+            for (size_t i = 0; i < num_keys; i++) {
+                res_len += snprintf(response + res_len, max_res_buff_size - res_len, "%lu) \"%s\"\n",i, keys[i]);
+            }
+        }
+        free(keys);
+    }
 
     if (strcmp(tokens[0], "set") == 0 && num_tokens == 3) {
         hash_table_insert(table, tokens[1], tokens[2]);
