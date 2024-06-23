@@ -2,61 +2,34 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/select.h>
+#include <sys/socket.h>
 #include <unistd.h>
 #include <errno.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
 #include <netinet/in.h>
-#include "hashtable.h"
+#include "server.h"
+#include "command.h"
 
-#define VERSION "0.0.1"
-#define PROG_NAME "SoMe"
-
-#define PORT 8008
 #define SOCKET_ERROR -1
 #define MAX_CLIENTS 2
-#define BACKLOG 5
 
 #define FNV_PRIME 0x10000001b3
 #define FNV_OFFSET 0xcbf29ce48422325UL
 
-typedef struct {
-    struct sockaddr_in addr;
-    int master_socket;
-    int client_sockets[MAX_CLIENTS];
-} server_t;
-
-server_t *server_init(short port, int backlog);
-void server_main_loop(server_t *server, hash_table *table);
-void server_accept_new_connection(server_t *server, char *welcome);
-void server_handle_client_close(server_t *server, int client_socket_idx);
-void server_handle_client_req(server_t *server, hash_table *table, int client_socket_idx, char *buffer, int valread);
-void server_print_sockets(server_t *server);
-
-int check_or_exit(int err, const char *msg);
-
-void process_command(hash_table *table, char *command, char *response);
-void tokenize_command(char *command, char **tokens, size_t *num_tokens);
-uint64_t hash_fnv1(const char *key, size_t length);
-
-int stop = 0;
-void gracefull_stop() {
-    stop = 1;
+int check_or_exit(int err, const char *msg) {
+    if (err == SOCKET_ERROR) {
+        perror(msg);
+        exit(1);
+    }
+    return err;
 }
 
-int main() {
-    const int tablesize = 5;
-    hash_table *table = hash_table_create(tablesize, hash_fnv1, NULL);
-    server_t *server;
-
-    server = server_init(PORT, BACKLOG);
-    server_main_loop(server, table);
-
-    printf("Server stopped\n");
-    hash_table_destroy(table);
-    free(server);
-
-    return 0;
+uint64_t hash_fnv1(const char *key, size_t length) {
+    uint64_t hash_value = FNV_OFFSET;
+    for (int i = 0; i < length; i++) {
+        hash_value ^= key[i];
+        hash_value *= FNV_PRIME;
+    }
+    return hash_value;
 }
 
 /* The `socket(2)` syscall creates an endpoint for communication
@@ -74,10 +47,15 @@ int main() {
  */
 server_t *server_init(short port, int backlog) {
     server_t *server = malloc(sizeof(server_t));
+
     if (server == NULL) {
         perror("Failed to allocate memory for server");
         exit(1);
     }
+
+    hash_table *table = hash_table_create(5, hash_fnv1, NULL);
+    server->table = table;
+    server->stop = 0;
 
     server->master_socket = 0;
     for (int i = 0; i < MAX_CLIENTS; i++) {
@@ -95,7 +73,7 @@ server_t *server_init(short port, int backlog) {
     check_or_exit(bind(server->master_socket, (struct sockaddr*)&server->addr, sizeof(server->addr)), "Failed to bind master socket to address");
 
     check_or_exit(listen(server->master_socket, backlog), "Failed to put master socket on passive mode");
-    printf("Waiting for connections on 0.0.0.0:%d\n", PORT);
+    printf("Waiting for connections on 0.0.0.0:%d\n", port);
 
     return server;
 }
@@ -108,18 +86,11 @@ void server_print_sockets(server_t *server) {
     }
 }
 
-int check_or_exit(int err, const char *msg) {
-    if (err == SOCKET_ERROR) {
-        perror(msg);
-        exit(1);
-    }
-    return err;
-}
-
 void server_accept_new_connection(server_t *server, char *welcome) {
     int new_socket, new_con_accepted = 0;
 
-    if ((new_socket = accept(server->master_socket, (struct sockaddr *)&server->addr, (socklen_t*)&server->addr)) == SOCKET_ERROR) {
+    socklen_t client_len = sizeof(server->addr);
+    if ((new_socket = accept(server->master_socket, (struct sockaddr *)&server->addr, &client_len)) == SOCKET_ERROR) {
         perror("accept");
         printf("Failed accepting connection\n");
     }
@@ -146,7 +117,8 @@ void server_accept_new_connection(server_t *server, char *welcome) {
 }
 
 void server_handle_client_close(server_t *server, int client_socket_idx) {
-    getpeername(server->client_sockets[client_socket_idx], (struct sockaddr*)&server->addr, (socklen_t*)&server->addr);
+    socklen_t addr_len = sizeof(server->addr);
+    getpeername(server->client_sockets[client_socket_idx], (struct sockaddr*)&server->addr, &addr_len);
     printf(
             "Host disconnected (socked: %d), ip %s, port %d\n",
             server->client_sockets[client_socket_idx],
@@ -157,21 +129,21 @@ void server_handle_client_close(server_t *server, int client_socket_idx) {
     server->client_sockets[client_socket_idx] = 0;
 }
 
-void server_handle_client_req(server_t *server, hash_table *table, int client_socket_idx, char *buffer, int valread) {
+void server_handle_client_req(server_t *server, int client_socket_idx, char *buffer, int valread) {
     char response[1024] = "";
     //buffer[valread] = '\0';
     buffer[strcspn(buffer, "\r\n")] = '\0';
-    process_command(table, buffer, response);
+    process_command(server, buffer, response, 1024);
     send(server->client_sockets[client_socket_idx], response, strlen(response), 0);
 }
 
-void server_main_loop(server_t *server, hash_table *table) {
+void server_main_loop(server_t *server) {
     int max_sd, activity, valread;
     fd_set readfds;
     char buffer[1025];
     char *welcome = "Welcome to the server\n";
 
-    while (stop != 1) {
+    while (server->stop != 1) {
         //clear the socket set
         FD_ZERO(&readfds);
 
@@ -206,66 +178,15 @@ void server_main_loop(server_t *server, hash_table *table) {
                     //Somebody disconnected. Close the socket and mark as 0 in list for reuse
                     server_handle_client_close(server, i);
                 } else {
-                    server_handle_client_req(server, table, i, buffer, valread);
+                    server_handle_client_req(server, i, buffer, valread);
                 }
             }
         }
     }
 }
 
-void process_command(hash_table *table, char *command, char *response) {
-    size_t num_tokens;
-    char *tokens[100];
-
-    tokenize_command(command, tokens, &num_tokens);
-
-    if (strcmp(tokens[0], "version") == 0) {
-        sprintf(response, "%s Version %s\n",PROG_NAME, VERSION);
-    }
-
-    if (strcmp(tokens[0], "stop") == 0) {
-        gracefull_stop();
-    }
-
-    if (strcmp(tokens[0], "print") == 0) {
-        hash_table_print(table);
-        sprintf(response, "OK\n");
-    }
-
-    if (strcmp(tokens[0], "set") == 0 && num_tokens == 3) {
-        hash_table_insert(table, tokens[1], tokens[2]);
-        sprintf(response, "OK\n");
-    }
-    if (strcmp(tokens[0], "get") == 0 && num_tokens == 2) {
-        char *val = (char *)hash_table_lookup(table, tokens[1]);
-        if (val) {
-            sprintf(response, "\"%s\"\n", val);
-        } else {
-            sprintf(response, "(nil)\n");
-        }
-    }
-}
-
-void tokenize_command(char *command, char **tokens, size_t *num_tokens) {
-    char *token = strtok(command, " ");
-    size_t i = 0;
-
-    while (token) {
-        if (i >= 100) {
-            break;
-        }
-        tokens[i++] = token;
-        token = strtok(NULL, " ");
-    }
-
-    *num_tokens = i;
-}
-
-uint64_t hash_fnv1(const char *key, size_t length) {
-    uint64_t hash_value = FNV_OFFSET;
-    for (int i = 0; i < length; i++) {
-        hash_value ^= key[i];
-        hash_value *= FNV_PRIME;
-    }
-    return hash_value;
+void server_free(server_t *server) {
+    close(server->master_socket);
+    hash_table_destroy(server->table);
+    free(server);
 }
