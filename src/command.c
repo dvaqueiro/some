@@ -35,7 +35,9 @@ int process_command(server_t *server, char *command, char *response, size_t max_
     }
 
     if (strcmp(tokens[0], "print") == 0) {
+        printf("##############\n");
         hash_table_print(table);
+        printf("##############\n");
         res_len = snprintf(response, max_res_buff_size, "OK\n");
     }
 

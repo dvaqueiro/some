@@ -9,9 +9,8 @@ int main() {
 
     server = server_init(PORT, BACKLOG);
     server_main_loop(server);
-
-    printf("Server stopped\n");
     server_free(server);
+    printf("Server stopped\n");
 
     return 0;
 }
