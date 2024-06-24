@@ -46,6 +46,10 @@ void server_free(server_t *server) {
     free(server);
 }
 
+void server_hash_table_create(server_t *server) {
+    server->table = hash_table_create(5, hash_fnv1, NULL);
+}
+
 /* The `socket(2)` syscall creates an endpoint for communication
  * and returns a file descriptor that refers to that endpoint.
  *
@@ -67,8 +71,7 @@ server_t *server_new(short port, int backlog) {
         exit(1);
     }
 
-    hash_table *table = hash_table_create(5, hash_fnv1, NULL);
-    server->table = table;
+    server_hash_table_create(server);
     server->stop = 0;
 
     server->master_socket = 0;

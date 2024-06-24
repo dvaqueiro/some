@@ -18,5 +18,6 @@ typedef struct {
 server_t *server_new(short port, int backlog);
 void server_run(server_t *server);
 void server_stop(server_t *server);
+void server_hash_table_create(server_t *server);
 
 #endif // SERVER_H

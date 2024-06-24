@@ -2,6 +2,7 @@
 #include <string.h>
 #include "command.h"
 #include "hashtable.h"
+#include "server.h"
 
 void tokenize_command(char *command, char **tokens, size_t *num_tokens) {
     char *token = strtok(command, " ");
@@ -64,6 +65,12 @@ int process_command(server_t *server, char *command, char *response, size_t max_
         } else {
             res_len = snprintf(response, max_res_buff_size, "(nil)\n");
         }
+    }
+
+    if (strcmp(tokens[0], "flushall") == 0 && num_tokens == 1) {
+        hash_table_destroy(server->table);
+        server_hash_table_create(server);
+        res_len = snprintf(response, max_res_buff_size, "OK\n");
     }
 
     return res_len;

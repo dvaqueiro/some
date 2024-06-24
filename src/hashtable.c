@@ -37,7 +37,6 @@ hash_table *hash_table_create(uint32_t size, hashfunction *hf, cleanup_function 
 }
 
 void hash_table_destroy(hash_table *ht) {
-    //TODO: what about individual elements
     for (uint32_t i = 0; i < ht->size; i++) {
         while (ht->elements[i] != NULL) {
             entry *tmp = ht->elements[i];
@@ -56,9 +55,7 @@ void hash_table_print(hash_table *ht) {
     printf("hash_table num elements %u:\n", ht->num_elements);
     printf("hash_table colisions %lu:\n", ht->collisions);
     for (uint32_t i = 0; i < ht->size; i++) {
-        if (ht->elements[i] == NULL) {
-            //printf("\t%i\t---\n", 1);
-        } else {
+        if (ht->elements[i] != NULL) {
             entry *tmp = ht->elements[i];
             printf(" [%i] (%s): \"%s\"", i, tmp->key, tmp->data);
             while (tmp != NULL) {
@@ -105,8 +102,6 @@ bool hash_table_insert(hash_table *ht, const char *key, char *data) {
     //Create new entry
     entry *e = malloc(sizeof(*e));
     e->data = strdup(data);
-    //e->key = malloc(strlen(key) + 1);
-    //strcpy(e->key, key);
     e->key = strdup(key);
 
     //insert entry on hashtable
