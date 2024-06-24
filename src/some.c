@@ -7,10 +7,9 @@
 int main() {
     server_t *server;
 
-    server = server_init(PORT, BACKLOG);
-    server_main_loop(server);
-    server_free(server);
-    printf("Server stopped\n");
+    server = server_new(PORT, BACKLOG);
+    server_run(server);
+    printf("Server gracefull stopped\n");
 
     return 0;
 }

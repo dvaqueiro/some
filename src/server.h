@@ -15,10 +15,8 @@ typedef struct {
     hash_table *table;
 } server_t;
 
-server_t *server_init(short port, int backlog);
-void server_free(server_t *server);
-void server_main_loop(server_t *server);
-void server_accept_new_connection(server_t *server, char *welcome);
-void server_print_sockets(server_t *server);
+server_t *server_new(short port, int backlog);
+void server_run(server_t *server);
+void server_stop(server_t *server);
 
 #endif // SERVER_H

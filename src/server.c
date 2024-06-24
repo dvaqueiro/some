@@ -40,6 +40,12 @@ uint64_t hash_fnv1(const char *key, size_t length) {
     return hash_value;
 }
 
+void server_free(server_t *server) {
+    close(server->master_socket);
+    hash_table_destroy(server->table);
+    free(server);
+}
+
 /* The `socket(2)` syscall creates an endpoint for communication
  * and returns a file descriptor that refers to that endpoint.
  *
@@ -53,7 +59,7 @@ uint64_t hash_fnv1(const char *key, size_t length) {
  *                           two-way, connection-based byte
  *                           streams.
  */
-server_t *server_init(short port, int backlog) {
+server_t *server_new(short port, int backlog) {
     server_t *server = malloc(sizeof(server_t));
 
     if (server == NULL) {
@@ -94,7 +100,8 @@ void server_print_sockets(server_t *server) {
     }
 }
 
-void server_accept_new_connection(server_t *server, char *welcome) {
+void server_accept_new_connection(server_t *server) {
+    char *welcome = "Welcome to the server\n";
     int new_socket, new_con_accepted = 0;
 
     socklen_t client_len = sizeof(server->addr);
@@ -146,11 +153,10 @@ void server_handle_client_req(server_t *server, Request *req) {
     send(server->client_sockets[req->socket_idx], response, res_len, 0);
 }
 
-void server_main_loop(server_t *server) {
+void server_run(server_t *server) {
     int max_sd, activity, valread;
     fd_set readfds;
     char buffer[MAX_READ_BUFFER_SIZE + 1];
-    char *welcome = "Welcome to the server\n";
 
     while (server->stop != 1) {
         //clear the socket set
@@ -178,7 +184,7 @@ void server_main_loop(server_t *server) {
 
         //If something happened on the master socket, then its an incoming connection
         if (FD_ISSET(server->master_socket, &readfds)) {
-            server_accept_new_connection(server, welcome);
+            server_accept_new_connection(server);
         }
 
         for (int sock_idx = 0; sock_idx < MAX_CLIENTS; sock_idx++) {
@@ -197,10 +203,10 @@ void server_main_loop(server_t *server) {
             }
         }
     }
+    server_free(server);
 }
 
-void server_free(server_t *server) {
-    close(server->master_socket);
-    hash_table_destroy(server->table);
-    free(server);
+void server_stop(server_t *server) {
+    server->stop = 1;
 }
+

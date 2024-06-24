@@ -31,7 +31,7 @@ int process_command(server_t *server, char *command, char *response, size_t max_
     }
 
     if (strcmp(tokens[0], "stop") == 0) {
-        server->stop = 1;
+        server_stop(server);
     }
 
     if (strcmp(tokens[0], "print") == 0) {
