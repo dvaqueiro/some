@@ -8,27 +8,31 @@
 
 int repl_exit = 0;
 
+void repl_run();
 void process_command(char *command);
 
 int main(int argc, char **argv) {
+    printf("%s", WELLCOME);
+    repl_run();
+    printf("Bye!\n");
+
+    return 0;
+}
+
+void repl_run() {
     char *command = NULL;
     size_t len = 10;
 
-    printf("%s", WELLCOME);
     while (!repl_exit) {
         printf("%s >> ", PROG_NAME);
         getline(&command, &len, stdin);
-
         if (!command) {
             break;
         }
         process_command(command);
     }
 
-    printf("Bye!\n");
     free(command);
-
-    return 0;
 }
 
 void process_command(char *command) {
