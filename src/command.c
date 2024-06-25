@@ -73,5 +73,9 @@ int process_command(server_t *server, char *command, char *response, size_t max_
         res_len = snprintf(response, max_res_buff_size, "OK\n");
     }
 
+    if (res_len == 0) {
+        res_len = snprintf(response, max_res_buff_size, "Invalid command\n");
+    }
+
     return res_len;
 }

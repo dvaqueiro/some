@@ -104,7 +104,6 @@ void server_print_sockets(server_t *server) {
 }
 
 void server_accept_new_connection(server_t *server) {
-    char *welcome = "Welcome to the server\n";
     int new_socket, new_con_accepted = 0;
 
     socklen_t client_len = sizeof(server->addr);
@@ -118,7 +117,6 @@ void server_accept_new_connection(server_t *server) {
             server->client_sockets[i] = new_socket;
             server_print_sockets(server);
             new_con_accepted = 1;
-            send(new_socket, welcome, strlen(welcome), 0);
             printf(
                     "Connection accepted (socket: %d) from ip:%s port:%d\n",
                     new_socket,
@@ -149,10 +147,11 @@ void server_handle_client_close(server_t *server, int client_socket_idx) {
 
 void server_handle_client_req(server_t *server, Request *req) {
     int res_len = 0;
-    char response[MAX_WRITE_BUFFER_SIZE] = "";
-    //buffer[valread] = '\0';
+    char response[MAX_WRITE_BUFFER_SIZE];
+    bzero(response, MAX_WRITE_BUFFER_SIZE);
     req->read_buffer[strcspn(req->read_buffer, "\r\n")] = '\0';
     res_len = process_command(server, req->read_buffer, response, MAX_WRITE_BUFFER_SIZE);
+    printf("Response (%i): %s\n", res_len, response);
     send(server->client_sockets[req->socket_idx], response, res_len, 0);
 }
 
@@ -192,7 +191,10 @@ void server_run(server_t *server) {
 
         for (int sock_idx = 0; sock_idx < MAX_CLIENTS; sock_idx++) {
             if (FD_ISSET(server->client_sockets[sock_idx], &readfds)) {
-                if ((valread = read(server->client_sockets[sock_idx], buffer, MAX_READ_BUFFER_SIZE)) == 0) {
+                if ((valread = read(server->client_sockets[sock_idx], buffer, MAX_READ_BUFFER_SIZE)) <= 0) {
+                    if (valread == -1) {
+                        printf("Read error: %i\n", errno);
+                    }
                     //Somebody disconnected. Close the socket and mark as 0 in list for reuse
                     server_handle_client_close(server, sock_idx);
                 } else {
