@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <bits/getopt_core.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,9 +19,27 @@ void repl_run(int sockfd);
 void process_command(char *command, int sockfd);
 
 int main(int argc, char **argv) {
-    int sockfd;
+    int sockfd, opt, port = 8008;
+    char *host = NULL;
 
-    sockfd = connect_init("127.0.0.1", 8008);
+    while ((opt = getopt(argc, argv, "h:p:v")) != -1) {
+        switch (opt) {
+            case 'h':
+                host = optarg;
+                break;
+            case 'p':
+                port = atoi(optarg);
+                break;
+            case 'v':
+                printf("%s %s\n", PROG_NAME, VERSION);
+                exit(0);
+            default:
+                fprintf(stderr, "Usage: %s [-h host] [-p port]\n", argv[0]);
+                exit(1);
+        }
+    }
+
+    sockfd = connect_init(host, port);
     repl_run(sockfd);
     close(sockfd);
     printf("Bye!\n");
