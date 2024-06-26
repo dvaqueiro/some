@@ -13,10 +13,22 @@
 
 int repl_exit = 0;
 
+int connect_init(char *host, int port);
 void repl_run(int sockfd);
 void process_command(char *command, int sockfd);
 
 int main(int argc, char **argv) {
+    int sockfd;
+
+    sockfd = connect_init("127.0.0.1", 8008);
+    repl_run(sockfd);
+    close(sockfd);
+    printf("Bye!\n");
+
+    return 0;
+}
+
+int connect_init(char *host, int port) {
     int sockfd;
     struct sockaddr_in server_addr;
 
@@ -27,20 +39,16 @@ int main(int argc, char **argv) {
     }
     bzero(&server_addr, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(8008);
-    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server_addr.sin_port = htons(port);
+    server_addr.sin_addr.s_addr = inet_addr(host);
 
     if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0) {
         perror("connect");
         exit(1);
     }
-
     printf("%s", WELLCOME);
-    repl_run(sockfd);
-    close(sockfd);
-    printf("Bye!\n");
 
-    return 0;
+    return sockfd;
 }
 
 void repl_run(int sockfd) {
