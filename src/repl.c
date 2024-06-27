@@ -20,7 +20,7 @@ void process_command(char *command, int sockfd);
 
 int main(int argc, char **argv) {
     int sockfd, opt, port = 8008;
-    char *host = NULL;
+    char *host = "127.0.0.1";
 
     while ((opt = getopt(argc, argv, "h:p:v")) != -1) {
         switch (opt) {
