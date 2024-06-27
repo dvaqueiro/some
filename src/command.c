@@ -33,14 +33,13 @@ int process_command(server_t *server, char *command, char *response, size_t max_
 
     if (strcmp(tokens[0], "stop") == 0) {
         server_stop(server);
-    }
-
-    if (strcmp(tokens[0], "print") == 0) {
-        printf("##############\n");
-        hash_table_print(table);
-        printf("##############\n");
         res_len = snprintf(response, max_res_buff_size, "OK\n");
     }
+
+    if (strcmp(tokens[0], "status") == 0) {
+        res_len = server_status(server, response, max_res_buff_size);
+    }
+
     if (strcmp(tokens[0], "keys") == 0 && num_tokens == 1) {
         int num_keys = 0;
         char **keys = hash_table_keys(table, &num_keys);

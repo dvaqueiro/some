@@ -8,6 +8,7 @@
 typedef struct {
     struct sockaddr_in addr;
     int max_clients;
+    int current_clients;
     int stop;
     int master_socket;
     hash_table *table;
@@ -17,6 +18,7 @@ typedef struct {
 server_t *server_new(short port, int backlog, int max_clients);
 void server_run(server_t *server);
 void server_stop(server_t *server);
+int server_status(server_t *server, char *buff, size_t buff_size);
 void server_hash_table_create(server_t *server);
 
 #endif // SERVER_H

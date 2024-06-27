@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include "server.h"
 #include "command.h"
+#include "hashtable.h"
 
 #define SOCKET_ERROR -1
 #define MAX_READ_BUFFER_SIZE 1024
@@ -72,6 +73,7 @@ server_t *server_new(short port, int backlog, int max_clients) {
 
     server_hash_table_create(server);
     server->max_clients = max_clients;
+    server->current_clients = 0;
     server->stop = 0;
 
     server->master_socket = 0;
@@ -95,16 +97,26 @@ server_t *server_new(short port, int backlog, int max_clients) {
     return server;
 }
 
-void server_print_sockets(server_t *server) {
-    printf("ip: %s, port: %d\n", inet_ntoa(server->addr.sin_addr), ntohs(server->addr.sin_port));
-    printf("[Master socket]: %d\n", server->master_socket);
+int server_status(server_t *server, char *buff, size_t buff_size) {
+    int res_len = 0;
+
+    res_len += snprintf(buff + res_len, buff_size - res_len, "# Server\n");
+    res_len += snprintf(buff + res_len, buff_size - res_len, "Max clients: %i\n", server->max_clients);
+    res_len += snprintf(buff + res_len, buff_size - res_len, "Current clients: %i\n", server->current_clients);
+    res_len += snprintf(buff + res_len, buff_size - res_len, "# Sockets\n");
+    res_len += snprintf(buff + res_len, buff_size - res_len, "Master socket: %d\n", server->master_socket);
     for (int i = 0; i < server->max_clients; i++) {
-        printf("[%d] -> %d\n", i, server->client_sockets[i]);
+        res_len += snprintf(buff + res_len, buff_size - res_len, "Client socket [%d]: %d\n", i, server->client_sockets[i]);
     }
+    res_len += snprintf(buff + res_len, buff_size - res_len, "# Hast Talbe\n");
+    res_len += hash_table_status(server->table, buff + res_len, buff_size - res_len);
+
+    return res_len;
 }
 
 void server_accept_new_connection(server_t *server) {
-    int new_socket, new_con_accepted = 0;
+    int new_socket;
+    int server_last_clients = server->current_clients;
 
     socklen_t client_len = sizeof(server->addr);
     if ((new_socket = accept(server->master_socket, (struct sockaddr *)&server->addr, &client_len)) == SOCKET_ERROR) {
@@ -115,8 +127,7 @@ void server_accept_new_connection(server_t *server) {
     for (int i = 0; i < server->max_clients; i++) {
         if (server->client_sockets[i] == 0) {
             server->client_sockets[i] = new_socket;
-            //server_print_sockets(server);
-            new_con_accepted = 1;
+            server->current_clients++;
             printf(
                     "Connection accepted (socket: %d) from ip:%s port:%d\n",
                     new_socket,
@@ -126,7 +137,8 @@ void server_accept_new_connection(server_t *server) {
             break;
         }
     }
-    if (new_con_accepted == 0) {
+
+    if (server->current_clients == server_last_clients) {
         printf("No more connections allowed\n");
         close(new_socket);
     }
@@ -143,6 +155,7 @@ void server_handle_client_close(server_t *server, int client_socket_idx) {
           );
     close(server->client_sockets[client_socket_idx]);
     server->client_sockets[client_socket_idx] = 0;
+    server->current_clients--;
 }
 
 void server_handle_client_req(server_t *server, Request *req) {

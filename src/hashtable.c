@@ -50,23 +50,27 @@ void hash_table_destroy(hash_table *ht) {
     free(ht);
 }
 
-void hash_table_print(hash_table *ht) {
-    printf("hash_table size %u:\n", ht->size);
-    printf("hash_table num elements %u:\n", ht->num_elements);
-    printf("hash_table colisions %lu:\n", ht->collisions);
+int hash_table_status(hash_table *ht, char *buff, size_t buff_size) {
+    int res_len = 0;
+
+    res_len += snprintf(buff + res_len, buff_size - res_len, "hash_table size %u:\n", ht->size);
+    res_len += snprintf(buff + res_len, buff_size - res_len, "hash_table num elements %u:\n", ht->num_elements);
+    res_len += snprintf(buff + res_len, buff_size - res_len, "hash_table colisions %lu:\n", ht->collisions);
     for (uint32_t i = 0; i < ht->size; i++) {
         if (ht->elements[i] != NULL) {
             entry *tmp = ht->elements[i];
-            printf(" [%i] (%s): \"%s\"", i, tmp->key, tmp->data);
+            res_len += snprintf(buff + res_len, buff_size - res_len, " [%i] (%s): \"%s\"", i, tmp->key, tmp->data);
             while (tmp != NULL) {
                 tmp = tmp->next;
                 if (tmp != NULL) {
-                    printf("->(%s): \"%s\"", tmp->key, tmp->data);
+                    res_len += snprintf(buff + res_len, buff_size - res_len, "->(%s): \"%s\"", tmp->key, tmp->data);
                 }
             }
-            printf("\n");
+            res_len += snprintf(buff + res_len, buff_size - res_len, "\n");
         }
     }
+
+    return res_len;
 }
 
 char **hash_table_keys(hash_table *ht, int *num_keys) {
