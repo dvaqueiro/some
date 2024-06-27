@@ -5,17 +5,16 @@
 #include <arpa/inet.h>
 #include "hashtable.h"
 
-#define MAX_CLIENTS 2
-
 typedef struct {
     struct sockaddr_in addr;
+    int max_clients;
     int stop;
     int master_socket;
-    int client_sockets[MAX_CLIENTS];
     hash_table *table;
+    int client_sockets[];
 } server_t;
 
-server_t *server_new(short port, int backlog);
+server_t *server_new(short port, int backlog, int max_clients);
 void server_run(server_t *server);
 void server_stop(server_t *server);
 void server_hash_table_create(server_t *server);

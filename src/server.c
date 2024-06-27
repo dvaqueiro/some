@@ -10,7 +10,6 @@
 #include "command.h"
 
 #define SOCKET_ERROR -1
-#define MAX_CLIENTS 2
 #define MAX_READ_BUFFER_SIZE 1024
 #define MAX_WRITE_BUFFER_SIZE 1024
 
@@ -63,8 +62,8 @@ void server_hash_table_create(server_t *server) {
  *                           two-way, connection-based byte
  *                           streams.
  */
-server_t *server_new(short port, int backlog) {
-    server_t *server = malloc(sizeof(server_t));
+server_t *server_new(short port, int backlog, int max_clients) {
+    server_t *server = malloc(sizeof(server_t) + max_clients * sizeof(int));
 
     if (server == NULL) {
         perror("Failed to allocate memory for server");
@@ -72,10 +71,11 @@ server_t *server_new(short port, int backlog) {
     }
 
     server_hash_table_create(server);
+    server->max_clients = max_clients;
     server->stop = 0;
 
     server->master_socket = 0;
-    for (int i = 0; i < MAX_CLIENTS; i++) {
+    for (int i = 0; i < max_clients; i++) {
         server->client_sockets[i] = 0;
     }
     bzero(&server->addr, sizeof(server->addr));
@@ -98,7 +98,7 @@ server_t *server_new(short port, int backlog) {
 void server_print_sockets(server_t *server) {
     printf("ip: %s, port: %d\n", inet_ntoa(server->addr.sin_addr), ntohs(server->addr.sin_port));
     printf("[Master socket]: %d\n", server->master_socket);
-    for (int i = 0; i < MAX_CLIENTS; i++) {
+    for (int i = 0; i < server->max_clients; i++) {
         printf("[%d] -> %d\n", i, server->client_sockets[i]);
     }
 }
@@ -112,10 +112,10 @@ void server_accept_new_connection(server_t *server) {
         printf("Failed accepting connection\n");
     }
     //add new socket to array of sockets
-    for (int i = 0; i < MAX_CLIENTS; i++) {
+    for (int i = 0; i < server->max_clients; i++) {
         if (server->client_sockets[i] == 0) {
             server->client_sockets[i] = new_socket;
-            server_print_sockets(server);
+            //server_print_sockets(server);
             new_con_accepted = 1;
             printf(
                     "Connection accepted (socket: %d) from ip:%s port:%d\n",
@@ -151,7 +151,6 @@ void server_handle_client_req(server_t *server, Request *req) {
     bzero(response, MAX_WRITE_BUFFER_SIZE);
     req->read_buffer[strcspn(req->read_buffer, "\r\n")] = '\0';
     res_len = process_command(server, req->read_buffer, response, MAX_WRITE_BUFFER_SIZE);
-    printf("Response (%i): %s\n", res_len, response);
     send(server->client_sockets[req->socket_idx], response, res_len, 0);
 }
 
@@ -169,7 +168,7 @@ void server_run(server_t *server) {
 
         //add child sockets to set
         max_sd = server->master_socket;
-        for (int i = 0; i < MAX_CLIENTS; i++) {
+        for (int i = 0; i < server->max_clients; i++) {
             if (server->client_sockets[i] > 0) {
                 FD_SET(server->client_sockets[i], &readfds);
             }
@@ -189,7 +188,7 @@ void server_run(server_t *server) {
             server_accept_new_connection(server);
         }
 
-        for (int sock_idx = 0; sock_idx < MAX_CLIENTS; sock_idx++) {
+        for (int sock_idx = 0; sock_idx < server->max_clients; sock_idx++) {
             if (FD_ISSET(server->client_sockets[sock_idx], &readfds)) {
                 if ((valread = read(server->client_sockets[sock_idx], buffer, MAX_READ_BUFFER_SIZE)) <= 0) {
                     if (valread == -1) {
