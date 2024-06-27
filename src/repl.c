@@ -88,16 +88,25 @@ void repl_run(int sockfd) {
 
 void process_command(char *command, int sockfd) {
     char buff[MAX_BUFF];
+    int len;
     int command_len = strlen(command);
     command[strcspn(command, "\n")] = '\0';
 
     if (strcmp(command, "exit") == 0) {
         repl_exit = 1;
     } else {
-        write(sockfd, command, command_len);
+        len = write(sockfd, command, command_len);
+        if (len < 1) {
+            printf("write");
+            exit(1);
+        }
         bzero(buff, command_len);
         bzero(buff, MAX_BUFF);
-        read(sockfd, buff, MAX_BUFF);
+        len = read(sockfd, buff, MAX_BUFF);
+        if (len < 1) {
+            printf("read");
+            exit(1);
+        }
         printf("%s", buff);
     }
 }
