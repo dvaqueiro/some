@@ -6,6 +6,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 #define VERSION "0.0.1"
 #define PROG_NAME "SoMe"
@@ -16,6 +18,7 @@ int repl_exit = 0;
 
 int connect_init(char *host, int port);
 void repl_run(int sockfd);
+void repl_run_his(int sockfd);
 void process_command(char *command, int sockfd);
 
 int main(int argc, char **argv) {
@@ -40,7 +43,7 @@ int main(int argc, char **argv) {
     }
 
     sockfd = connect_init(host, port);
-    repl_run(sockfd);
+    repl_run_his(sockfd);
     close(sockfd);
     printf("Bye!\n");
 
@@ -86,11 +89,30 @@ void repl_run(int sockfd) {
     free(command);
 }
 
+void repl_run_his(int sockfd) {
+    char *prompt = malloc(9);
+    snprintf(prompt, 9, "%s >> ", PROG_NAME);
+
+    while (!repl_exit) {
+        char *command = readline(prompt);
+        if (!command) {
+            break;
+        }
+        add_history(command);
+        process_command(command, sockfd);
+
+        free(command);
+    }
+
+    free(prompt);
+}
+
 void process_command(char *command, int sockfd) {
     char buff[MAX_BUFF];
     int len;
-    int command_len = strlen(command);
-    command[strcspn(command, "\n")] = '\0';
+    int command_len = strlen(command) + 1;
+    command[command_len - 1] = '\0';
+    //command[strcspn(command, "\n")] = '\0';
 
     if (strcmp(command, "exit") == 0) {
         repl_exit = 1;

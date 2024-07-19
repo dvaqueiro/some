@@ -108,7 +108,7 @@ int server_status(server_t *server, char *buff, size_t buff_size) {
     for (int i = 0; i < server->max_clients; i++) {
         res_len += snprintf(buff + res_len, buff_size - res_len, "Client socket [%d]: %d\n", i, server->client_sockets[i]);
     }
-    res_len += snprintf(buff + res_len, buff_size - res_len, "# Hast Talbe\n");
+    res_len += snprintf(buff + res_len, buff_size - res_len, "# Hash Table\n");
     res_len += hash_table_status(server->table, buff + res_len, buff_size - res_len);
 
     return res_len;

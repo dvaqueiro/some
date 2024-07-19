@@ -63,7 +63,7 @@ int hash_table_status(hash_table *ht, char *buff, size_t buff_size) {
             while (tmp != NULL) {
                 tmp = tmp->next;
                 if (tmp != NULL) {
-                    res_len += snprintf(buff + res_len, buff_size - res_len, "->(%s): \"%s\"", tmp->key, tmp->data);
+                    res_len += snprintf(buff + res_len, buff_size - res_len, " -> (%s): \"%s\"", tmp->key, tmp->data);
                 }
             }
             res_len += snprintf(buff + res_len, buff_size - res_len, "\n");
@@ -99,7 +99,6 @@ bool hash_table_insert(hash_table *ht, const char *key, char *data) {
 
     //Update entry
     if (hash_table_lookup(ht, key) != NULL) {
-        ht->num_elements--;
         hash_table_delete(ht, key);
     }
 

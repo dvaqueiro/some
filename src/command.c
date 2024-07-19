@@ -4,16 +4,57 @@
 #include "hashtable.h"
 #include "server.h"
 
-void tokenize_command(char *command, char **tokens, size_t *num_tokens) {
-    char *token = strtok(command, " ");
-    size_t i = 0;
+char *strdelch(char *str, char ch) {
+    char *current = str;
+    char *tail = str;
 
-    while (token) {
-        if (i >= 100) {
-            break;
+    while(*tail) {
+        if(*tail == ch) {
+            tail++;
+        } else {
+            *current++ = *tail++;
         }
-        tokens[i++] = token;
-        token = strtok(NULL, " ");
+    }
+    *current = 0;
+
+    return str;
+}
+
+void tokenize_command(char *command, char **tokens, size_t *num_tokens) {
+    size_t i = 0;
+    const char *start;
+    int state = ' ';
+
+    while (*command) {
+        switch (state) {
+            case ' ': // Consuming spaces
+                if (*command == '\"') {
+                    start = command;
+                    state = '\"';  // begin quote
+                } else if (*command != ' ') {
+                    start = command;
+                    state = 'T';
+                }
+                break;
+            case 'T': // non-quoted text
+                if (*command == ' ') {
+                    tokens[i++] = strndup(start, command - start);
+                    state = ' ';
+                } else if (*command == '\"') {
+                    state = '\"'; // begin quote
+                }
+                break;
+            case '\"': // Inside a quote
+                if (*command == '\"') {
+                    state = 'T'; // end quote
+                }
+                break;
+        }
+        command++;
+    }
+
+    if (state != ' ') {
+        tokens[i++] = strndup(start, command - start);
     }
 
     *num_tokens = i;
@@ -54,7 +95,8 @@ int process_command(server_t *server, char *command, char *response, size_t max_
     }
 
     if (strcmp(tokens[0], "set") == 0 && num_tokens == 3) {
-        hash_table_insert(table, tokens[1], tokens[2]);
+        char *val = strdelch(tokens[2], '\"');
+        hash_table_insert(table, tokens[1], val);
         res_len = snprintf(response, max_res_buff_size, "OK\n");
     }
     if (strcmp(tokens[0], "get") == 0 && num_tokens == 2) {
