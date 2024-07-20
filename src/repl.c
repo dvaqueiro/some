@@ -11,7 +11,7 @@
 
 #define VERSION "0.0.1"
 #define PROG_NAME "SoMe"
-#define WELLCOME PROG_NAME ". Save Objects in Memory.\nType exit to return to cli.\n"
+#define WELLCOME "Type exit to return to cli.\n"
 #define MAX_BUFF 1024
 
 int repl_exit = 0;
@@ -68,6 +68,7 @@ int connect_init(char *host, int port) {
         perror("connect");
         exit(1);
     }
+    process_command("version", sockfd);
     printf("%s", WELLCOME);
 
     return sockfd;
@@ -111,22 +112,23 @@ void process_command(char *command, int sockfd) {
     char buff[MAX_BUFF];
     int len;
     int command_len = strlen(command) + 1;
-    command[command_len - 1] = '\0';
-    //command[strcspn(command, "\n")] = '\0';
+    if (command[command_len - 1] != '\0') {
+        command[command_len - 1] = '\0';
+    }
 
     if (strcmp(command, "exit") == 0) {
         repl_exit = 1;
     } else {
         len = write(sockfd, command, command_len);
         if (len < 1) {
-            printf("write");
+            printf("Can not write to server.\n");
             exit(1);
         }
         bzero(buff, command_len);
         bzero(buff, MAX_BUFF);
         len = read(sockfd, buff, MAX_BUFF);
         if (len < 1) {
-            printf("read");
+            printf("Can not read from server.\n");
             exit(1);
         }
         printf("%s", buff);

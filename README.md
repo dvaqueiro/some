@@ -17,6 +17,7 @@ The only purpose of this project is to learn how to create a client-server archi
 - [ ] Increase hash table size when it reaches a certain threshold.
 - [X] repl allow history commands.
 - [X] repl allow enquoted strings.
+- [X] repl close if server not accept more connections.
 
 ## Build and run
 
