@@ -8,14 +8,11 @@
 #include <netinet/in.h>
 #include "server.h"
 #include "command.h"
-#include "hashtable.h"
+#include "database.h"
 
 #define SOCKET_ERROR -1
 #define MAX_READ_BUFFER_SIZE 1024
 #define MAX_WRITE_BUFFER_SIZE 1024
-
-#define FNV_PRIME 0x10000001b3
-#define FNV_OFFSET 0xcbf29ce48422325UL
 
 typedef struct Request {
     int socket_idx;
@@ -31,23 +28,10 @@ int check_or_exit(int err, const char *msg) {
     return err;
 }
 
-uint64_t hash_fnv1(const char *key, size_t length) {
-    uint64_t hash_value = FNV_OFFSET;
-    for (int i = 0; i < length; i++) {
-        hash_value ^= key[i];
-        hash_value *= FNV_PRIME;
-    }
-    return hash_value;
-}
-
 void server_free(server_t *server) {
     close(server->master_socket);
-    hash_table_destroy(server->table);
+    db_free(server->db);
     free(server);
-}
-
-void server_hash_table_create(server_t *server) {
-    server->table = hash_table_create(5, hash_fnv1, NULL);
 }
 
 /* The `socket(2)` syscall creates an endpoint for communication
@@ -71,7 +55,7 @@ server_t *server_new(short port, int backlog, int max_clients) {
         exit(1);
     }
 
-    server_hash_table_create(server);
+    server->db = db_create();
     server->max_clients = max_clients;
     server->current_clients = 0;
     server->stop = 0;
@@ -109,7 +93,7 @@ int server_status(server_t *server, char *buff, size_t buff_size) {
         res_len += snprintf(buff + res_len, buff_size - res_len, "Client socket [%d]: %d\n", i, server->client_sockets[i]);
     }
     res_len += snprintf(buff + res_len, buff_size - res_len, "# Hash Table\n");
-    res_len += hash_table_status(server->table, buff + res_len, buff_size - res_len);
+    res_len += db_status(server->db, buff + res_len, buff_size - res_len);
 
     return res_len;
 }

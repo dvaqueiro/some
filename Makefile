@@ -1,7 +1,7 @@
 all: build repl
 
 build:
-	gcc -o bin/some_server -g -Wall -pedantic -fsanitize=address src/some.c src/server.c src/hashtable.c src/command.c
+	gcc -o bin/some_server -g -Wall -pedantic -fsanitize=address src/some.c src/server.c src/hashtable.c src/command.c src/database.c
 
 repl:
 	gcc -o bin/repl -g -Wall -pedantic -fsanitize=address src/repl.c -lreadline -ltermcap

@@ -17,6 +17,4 @@ char *hash_table_lookup(hash_table *ht, const char *key);
 char *hash_table_delete(hash_table *ht, const char *key);
 char **hash_table_keys(hash_table *ht, int *num_keys);
 
-uint64_t hash_table_collisions(hash_table *ht);
-
 #endif // !HASHTABLE_H

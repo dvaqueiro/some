@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "command.h"
-#include "hashtable.h"
+#include "database.h"
 #include "server.h"
 
 char *strdelch(char *str, char ch) {
@@ -64,7 +64,7 @@ int process_command(server_t *server, char *command, char *response, size_t max_
     int res_len = 0;
     size_t num_tokens;
     char *tokens[100];
-    hash_table *table = server->table;
+    database *db = server->db;
 
     tokenize_command(command, tokens, &num_tokens);
 
@@ -83,7 +83,7 @@ int process_command(server_t *server, char *command, char *response, size_t max_
 
     if (strcmp(tokens[0], "keys") == 0 && num_tokens == 1) {
         int num_keys = 0;
-        char **keys = hash_table_keys(table, &num_keys);
+        char **keys = db_keys(db, &num_keys);
         if (num_keys == 0) {
             res_len = snprintf(response, max_res_buff_size, "(empty list)\n");
         } else {
@@ -96,11 +96,11 @@ int process_command(server_t *server, char *command, char *response, size_t max_
 
     if (strcmp(tokens[0], "set") == 0 && num_tokens == 3) {
         char *val = strdelch(tokens[2], '\"');
-        hash_table_insert(table, tokens[1], val);
+        db_insert(db, tokens[1], val);
         res_len = snprintf(response, max_res_buff_size, "OK\n");
     }
     if (strcmp(tokens[0], "get") == 0 && num_tokens == 2) {
-        char *val = (char *)hash_table_lookup(table, tokens[1]);
+        char *val = (char *)db_lookup(db, tokens[1]);
         if (val) {
             res_len = snprintf(response, max_res_buff_size, "\"%s\"\n", val);
         } else {
@@ -109,8 +109,7 @@ int process_command(server_t *server, char *command, char *response, size_t max_
     }
 
     if (strcmp(tokens[0], "flushall") == 0 && num_tokens == 1) {
-        hash_table_destroy(server->table);
-        server_hash_table_create(server);
+        db_flushall(db);
         res_len = snprintf(response, max_res_buff_size, "OK\n");
     }
 

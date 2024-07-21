@@ -156,8 +156,3 @@ char *hash_table_delete(hash_table *ht, const char *key) {
 
     return result;
 }
-
-
-uint64_t hash_table_collisions(hash_table *ht) {
-    return ht->collisions;
-}
