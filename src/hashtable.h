@@ -16,5 +16,7 @@ bool hash_table_insert(hash_table *ht, const char *key,  char *data);
 char *hash_table_lookup(hash_table *ht, const char *key);
 char *hash_table_delete(hash_table *ht, const char *key);
 char **hash_table_keys(hash_table *ht, int *num_keys);
+int hash_table_size(hash_table *ht);
+int hash_table_elements(hash_table *ht);
 
 #endif // !HASHTABLE_H

@@ -4,7 +4,8 @@
 #include "hashtable.h"
 
 typedef struct database {
-    hash_table *table;
+    int expanding;
+    hash_table *ht[2];
 } database;
 
 database *db_create();

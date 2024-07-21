@@ -156,3 +156,11 @@ char *hash_table_delete(hash_table *ht, const char *key) {
 
     return result;
 }
+
+int hash_table_size(hash_table *ht) {
+    return ht->size;
+}
+
+int hash_table_elements(hash_table *ht) {
+    return ht->num_elements;
+}

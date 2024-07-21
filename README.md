@@ -14,7 +14,9 @@ The only purpose of this project is to learn how to create a client-server archi
 - Hashmap to save and restore objects by keys.
 
 ## TODO
-- [ ] Increase hash table size when it reaches a certain threshold.
+- [X] Increase hash table size when it reaches a certain threshold.
+- [ ] Meassure the time to save and retrieve objects.
+- [ ] Meassure the time needed to resize hash table.
 - [X] repl allow history commands.
 - [X] repl allow enquoted strings.
 - [X] repl close if server not accept more connections.
